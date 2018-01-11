@@ -1,0 +1,142 @@
+#include<stdio.h>
+#include<conio.h>
+#include<string.h>
+#include<ctype.h>
+#include<math.h>
+struct symbol
+{
+	char a;
+	int freq;
+	float prob,selfi,ps;
+	char code[10];
+}s[26];
+float ori_size,com_ratio,com_size=0.0;
+void shannon(int,int,int);
+void ratios(int count)
+{
+	float avg_bc,avg_ac,redundancy_m,redun_ps;
+	ori_size=count*8;
+	com_ratio=ori_size/com_size;
+	avg_bc=ori_size/count;
+	avg_ac=com_size/count;
+	redundancy_m=1-(1/com_ratio);
+	redun_ps=avg_bc-avg_ac;
+	printf("\nOriginal size of string is:%f bits",ori_size);
+	printf("\nCompressed size of string is:%f bits",com_size);
+	printf("\nThe compression Ratio is %f",com_ratio);
+	printf("\nAverage length before compression is %f bits/symbol",avg_bc);
+	printf("\nAverage length after compression is %f bits/symbol",avg_ac);
+	printf("\nRedundancy removed for whole msg is %f bits",redundancy_m);
+	printf("\nRedundancy removed for per symbol is %f bits/symbol",redun_ps);
+}
+void main()
+{
+	FILE* fp=NULL;
+	int i,j,t,n=0;
+	char c;
+	float count=0.0,entropy=0.0;
+	clrscr();
+	fp=fopen("demo.txt","r");
+	if(fp==NULL)
+	{
+		printf("Cannot open file...");
+		exit();
+	}
+	while((c= fgetc(fp))!=EOF)
+	{
+		count++;
+		s[(toascii(c)-97)].freq++;
+		s[(toascii(c)-97)].a=c;
+	}
+	fclose(fp);
+	for(i=0;i<26;i++)
+	{
+		for(j=i;j<26;j++)
+		{
+		if(s[i].freq>0)
+		{
+			if(s[i].freq<s[j].freq)
+			{
+				t=s[i].freq;
+				s[i].freq=s[j].freq;
+				s[j].freq=t;
+				c=s[i].a;
+				s[i].a=s[i+1].a;
+				s[i+1].a=c;
+			}
+		}
+		else
+			continue;
+		}
+	}
+	for(i=0;i<26;i++)
+	{
+		if(s[i].freq<=0)
+		{
+			continue;
+		}
+		else
+		{
+			n++;
+			s[i].prob=s[i].freq/count;
+			s[i].selfi=(log(1/s[i].prob)/log(2));
+			s[i].ps=s[i].prob*s[i].selfi;
+			entropy+=s[i].ps;
+		}
+	}
+	shannon(0,n-1,0);
+	com_ratio=(count*8)/
+	printf("Char\tFreq   \tprob\t\tself_info\tPi*Si\t\tCode\n");
+	for(i=0;i<26;i++)
+	{
+		if(s[i].freq>0)
+		{
+			printf("%c\t%d\t%f\t%f\t%f\t%s\n",s[i].a,s[i].freq,s[i].prob,s[i].selfi,s[i].ps,s[i].code);
+			com_size+=strlen(s[i].code)*s[i].freq;
+		}
+	}
+	printf("\nEntropy is:%f",entropy);
+	ratios(count);
+	getch();
+}
+void shannon(int start,int end,int bit)
+{
+	int i,j,k,high,low;
+	i=start;
+	j=end;
+	high=s[i].freq;
+	low=s[j].freq;
+	while(i<(j-1))
+	{
+	while(high<=low && i<(j-1))
+	{
+		i++;
+		high+=s[i].freq;
+	}
+	while(high>low && i<(j-1))
+	{
+		j--;
+		low+=s[j].freq;
+	}
+	}
+	if(i==start)
+		s[start].code[bit]='0';
+	else if((i-start)>=1)
+	{
+		for(k=start;k<=i;k++)
+		{
+			s[k].code[bit]='0';
+		}
+		shannon(start,i,bit+1);
+	}
+	if(j==end)
+		s[end].code[bit]='1';
+	else if((end-j)>=1)
+	{
+		for(k=j;k<=end;k++)
+		{
+			s[k].code[bit]='1';
+		}
+		shannon(j,end,bit+1);
+	}
+}
